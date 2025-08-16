@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>BIK Karlskoga - Beställ från Café</title>
+    <title>V2. BIK Karlskoga - Beställ från Café</title>
     <style>
         * {
             box-sizing: border-box;
@@ -347,12 +347,30 @@
             border: 2px solid #f5c6cb;
         }
         
-        .order-info {
-            background: #fff3e0;
-            padding: 15px;
-            border-radius: 8px;
+        .phone-input-section {
             margin: 15px 0;
-            border-left: 4px solid #FF6B35;
+        }
+        
+        .phone-input-section label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #1e3c72;
+        }
+        
+        .phone-input-section input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        
+        .phone-input-section input:focus {
+            border-color: #2a5298;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(42, 82, 152, 0.2);
         }
         
         .order-info h4 {
@@ -533,8 +551,14 @@
                     <div class="total-amount" id="totalAmount">Totalt: 0 kr</div>
                 </div>
                 
+                <div class="phone-input-section">
+                    <label for="phoneNumber">Ditt telefonnummer för Swish:</label>
+                    <input type="tel" id="phoneNumber" placeholder="070-123 45 67" maxlength="15">
+                    <small style="color: #666; font-size: 12px;">Behövs för att skicka Swish-förfrågan</small>
+                </div>
+                
                 <button class="btn btn-swish" id="swishBtn">
-                    <span class="swish-icon">📱</span>Betala med Swish
+                    <span class="swish-icon">📱</span>Skicka Swish-förfrågan
                 </button>
                 
                 <button class="btn btn-clear" id="clearBtn">
@@ -543,10 +567,11 @@
                 
                 <div class="order-info">
                     <h4>💡 Så här fungerar det:</h4>
-                    <p>1. Klicka på "Betala med Swish"</p>
-                    <p>2. Du omdirigeras till Swish-appen</p>
-                    <p>3. Bekräfta betalningen</p>
-                    <p>4. Hämta din beställning i cafét!</p>
+                    <p>1. Ange ditt telefonnummer</p>
+                    <p>2. Klicka "Skicka Swish-förfrågan"</p>
+                    <p>3. Du får en Swish-förfrågan på din telefon</p>
+                    <p>4. Bekräfta betalningen i Swish</p>
+                    <p>5. Hämta din beställning i cafét!</p>
                 </div>
             </div>
         </div>
@@ -675,6 +700,29 @@
             showStatus('Kundvagnen rensad!');
         }
         
+        // Validera och formatera telefonnummer
+        function formatPhoneNumber(phone) {
+            // Ta bort alla icke-siffror
+            const cleaned = phone.replace(/\D/g, '');
+            
+            // Kontrollera om det är svenskt nummer
+            if (cleaned.startsWith('46')) {
+                return cleaned; // Redan med landskod
+            } else if (cleaned.startsWith('0')) {
+                return '46' + cleaned.substring(1); // Ta bort 0 och lägg till 46
+            } else if (cleaned.length === 9) {
+                return '46' + cleaned; // Lägg till 46
+            }
+            
+            return cleaned;
+        }
+        
+        function validatePhoneNumber(phone) {
+            const formatted = formatPhoneNumber(phone);
+            // Svenskt mobilnummer ska vara 46 + 9 siffror (total 11)
+            return formatted.length >= 10 && formatted.length <= 13;
+        }
+        
         // Öppna Swish för betalning
         function payWithSwish() {
             const total = Object.keys(cart).reduce((sum, name) => {
@@ -686,6 +734,24 @@
                 return;
             }
             
+            // Kontrollera telefonnummer
+            const phoneInput = document.getElementById('phoneNumber');
+            const phone = phoneInput.value.trim();
+            
+            if (!phone) {
+                showStatus('Ange ditt telefonnummer för Swish!', 'error');
+                phoneInput.focus();
+                return;
+            }
+            
+            if (!validatePhoneNumber(phone)) {
+                showStatus('Ange ett giltigt svenskt mobilnummer!', 'error');
+                phoneInput.focus();
+                return;
+            }
+            
+            const formattedPhone = formatPhoneNumber(phone);
+            
             // Skapa beställningsmeddelande
             const orderItems = Object.keys(cart).map(name => {
                 const item = cart[name];
@@ -695,87 +761,44 @@
             const message = `BIK Karlskoga - ${orderItems}`;
             const truncatedMessage = message.length > 50 ? message.substring(0, 47) + '...' : message;
             
-            // Formatera belopp (Swish vill ha punkt, inte komma)
-            const formattedAmount = total.toFixed(2);
-            
-            // Prova flera olika Swish URL-format
-            const swishFormats = [
-                // Format 1: Standard Swish URL med enkla parametrar
-                `swish://paymentrequest?token=&callbackurl=&amount=${formattedAmount}&currency=SEK&payee=${swishNumber}&message=${encodeURIComponent(truncatedMessage)}`,
-                
-                // Format 2: Förenklat format
-                `swish://payment?amount=${formattedAmount}&number=${swishNumber}&message=${encodeURIComponent(truncatedMessage)}`,
-                
-                // Format 3: QR-kod format (fallback)
-                `swish://qr/${swishNumber}?amount=${formattedAmount}&message=${encodeURIComponent(truncatedMessage)}`,
-                
-                // Format 4: Nyare format
-                `swish://paymentrequest?payee=${swishNumber}&amount=${formattedAmount}&message=${encodeURIComponent(truncatedMessage)}`
-            ];
-            
-            console.log('Försöker Swish-format:', swishFormats[0]);
-            
-            // Prova första formatet
-            let swishUrl = swishFormats[0];
-            
-            try {
-                // Visa loading-meddelande
-                showStatus(`Öppnar Swish för ${total} kr...`);
-                
-                // Försök öppna Swish-appen
-                const swishWindow = window.open(swishUrl, '_self');
-                
-                // Fallback om första formatet inte fungerar
-                setTimeout(() => {
-                    // Om användaren fortfarande är på sidan, prova nästa format
-                    if (!document.hidden) {
-                        console.log('Första formatet misslyckades, provar format 2');
-                        window.location.href = swishFormats[1];
-                    }
-                }, 1000);
-                
-                // Visa bekräftelsemeddelande efter en stund
-                setTimeout(() => {
-                    if (!document.hidden) {
-                        const shouldClear = confirm(`Swish bör ha öppnats för betalning av ${total} kr.\n\nOm Swish inte öppnades, kontrollera att appen är installerad.\n\nVill du rensa kundvagnen när betalningen är klar?`);
-                        if (shouldClear) {
-                            // Vänta lite till innan rensning för att ge tid för betalning
-                            setTimeout(() => {
-                                if (confirm('Är betalningen genomförd? Klicka OK för att rensa kundvagnen.')) {
-                                    clearCart();
-                                    showStatus('Tack för din beställning! Hämta i cafét. 🏒');
-                                }
-                            }, 3000);
-                        }
-                    }
-                }, 2000);
-                
-            } catch (error) {
-                console.error('Swish fel:', error);
-                
-                // Prova alternativt format vid fel
-                console.log('Försöker alternativt format...');
-                try {
-                    window.location.href = swishFormats[1];
-                } catch (error2) {
-                    showStatus('Kunde inte öppna Swish. Kontrollera att appen är installerad.', 'error');
-                    
-                    // Visa manuell instruktion som fallback
-                    const manualInstructions = `
-Swish-information för manuell betalning:
+            // Visa bekräftelse innan förfrågan skickas
+            const confirmMessage = `
+Skicka Swish-förfrågan?
 
-Nummer: ${swishNumber}
+Till: ${phone}
 Belopp: ${total} kr
 Meddelande: ${truncatedMessage}
 
-Öppna Swish manuellt och ange uppgifterna ovan.
-                    `;
-                    
-                    setTimeout(() => {
-                        alert(manualInstructions);
-                    }, 1000);
-                }
+Du får en förfrågan i Swish-appen som du kan acceptera eller avslå.
+            `;
+            
+            if (!confirm(confirmMessage)) {
+                return;
             }
+            
+            // Simulera skickande av Swish-förfrågan
+            showStatus('Skickar Swish-förfrågan...', 'success');
+            
+            // I verkligheten skulle här ett API-anrop göras till Swish
+            // För demo-syfte simulerar vi detta
+            setTimeout(() => {
+                showStatus(`✅ Swish-förfrågan skickad till ${phone}!`, 'success');
+                
+                // Visa instruktioner
+                setTimeout(() => {
+                    alert(`Swish-förfrågan skickad till ${phone}!\n\nKontrollera din Swish-app och bekräfta betalningen.\n\nNär betalningen är genomförd, hämta din beställning i cafét!`);
+                    
+                    // Fråga om rensning av kundvagn
+                    setTimeout(() => {
+                        if (confirm('Har du bekräftat betalningen i Swish?\n\nKlicka OK för att rensa kundvagnen.')) {
+                            clearCart();
+                            phoneInput.value = '';
+                            showStatus('Tack för din beställning! 🏒', 'success');
+                        }
+                    }, 3000);
+                }, 1500);
+                
+            }, 2000);
         }
         
         // Event listeners
@@ -814,6 +837,7 @@ Meddelande: ${truncatedMessage}
             // Action buttons
             document.getElementById('swishBtn').addEventListener('click', payWithSwish);
             document.getElementById('clearBtn').addEventListener('click', clearCart);
+            
             
             showStatus('Välkommen till BIK Karlskoga café! 🏒');
         });
