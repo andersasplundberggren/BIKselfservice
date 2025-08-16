@@ -693,30 +693,88 @@
             }).join(', ');
             
             const message = `BIK Karlskoga - ${orderItems}`;
-            const truncatedMessage = message.length > 70 ? message.substring(0, 67) + '...' : message;
+            const truncatedMessage = message.length > 50 ? message.substring(0, 47) + '...' : message;
             
-            // Skapa Swish-URL
-            const formattedAmount = total.toFixed(2).replace('.', ',');
-            const swishUrl = `swish://payment?data={"version":1,"payee":{"value":"${swishNumber}"},"amount":{"value":"${formattedAmount}"},"message":{"value":"${encodeURIComponent(truncatedMessage)}"}}`;
+            // Formatera belopp (Swish vill ha punkt, inte komma)
+            const formattedAmount = total.toFixed(2);
             
-            console.log('Swish URL:', swishUrl);
+            // Prova flera olika Swish URL-format
+            const swishFormats = [
+                // Format 1: Standard Swish URL med enkla parametrar
+                `swish://paymentrequest?token=&callbackurl=&amount=${formattedAmount}&currency=SEK&payee=${swishNumber}&message=${encodeURIComponent(truncatedMessage)}`,
+                
+                // Format 2: Förenklat format
+                `swish://payment?amount=${formattedAmount}&number=${swishNumber}&message=${encodeURIComponent(truncatedMessage)}`,
+                
+                // Format 3: QR-kod format (fallback)
+                `swish://qr/${swishNumber}?amount=${formattedAmount}&message=${encodeURIComponent(truncatedMessage)}`,
+                
+                // Format 4: Nyare format
+                `swish://paymentrequest?payee=${swishNumber}&amount=${formattedAmount}&message=${encodeURIComponent(truncatedMessage)}`
+            ];
+            
+            console.log('Försöker Swish-format:', swishFormats[0]);
+            
+            // Prova första formatet
+            let swishUrl = swishFormats[0];
             
             try {
-                // Försök öppna Swish-appen
-                window.location.href = swishUrl;
-                
+                // Visa loading-meddelande
                 showStatus(`Öppnar Swish för ${total} kr...`);
                 
-                // Visa bekräftelsemeddelande
+                // Försök öppna Swish-appen
+                const swishWindow = window.open(swishUrl, '_self');
+                
+                // Fallback om första formatet inte fungerar
                 setTimeout(() => {
-                    if (confirm(`Betalning skickad till Swish för ${total} kr.\n\nNär du bekräftat betalningen, hämta din beställning i cafét!\n\nVill du rensa kundvagnen?`)) {
-                        clearCart();
+                    // Om användaren fortfarande är på sidan, prova nästa format
+                    if (!document.hidden) {
+                        console.log('Första formatet misslyckades, provar format 2');
+                        window.location.href = swishFormats[1];
+                    }
+                }, 1000);
+                
+                // Visa bekräftelsemeddelande efter en stund
+                setTimeout(() => {
+                    if (!document.hidden) {
+                        const shouldClear = confirm(`Swish bör ha öppnats för betalning av ${total} kr.\n\nOm Swish inte öppnades, kontrollera att appen är installerad.\n\nVill du rensa kundvagnen när betalningen är klar?`);
+                        if (shouldClear) {
+                            // Vänta lite till innan rensning för att ge tid för betalning
+                            setTimeout(() => {
+                                if (confirm('Är betalningen genomförd? Klicka OK för att rensa kundvagnen.')) {
+                                    clearCart();
+                                    showStatus('Tack för din beställning! Hämta i cafét. 🏒');
+                                }
+                            }, 3000);
+                        }
                     }
                 }, 2000);
                 
             } catch (error) {
                 console.error('Swish fel:', error);
-                showStatus('Kunde inte öppna Swish. Kontrollera att appen är installerad.', 'error');
+                
+                // Prova alternativt format vid fel
+                console.log('Försöker alternativt format...');
+                try {
+                    window.location.href = swishFormats[1];
+                } catch (error2) {
+                    showStatus('Kunde inte öppna Swish. Kontrollera att appen är installerad.', 'error');
+                    
+                    // Visa manuell instruktion som fallback
+                    const manualInstructions = `
+Swish-information för manuell betalning:
+
+Nummer: ${swishNumber}
+Belopp: ${total} kr
+Meddelande: ${truncatedMessage}
+
+Öppna Swish manuellt och ange uppgifterna ovan.
+                    `;
+                    
+                    setTimeout(() => {
+                        alert(manualInstructions);
+                    }, 1000);
+                }
             }
         }
         
