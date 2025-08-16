@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>BIK Karlskoga - Beställ från Café</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .header .logo {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 10px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 1.8em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            margin: 5px 0 0 0;
+            font-size: 1em;
+            opacity: 0.9;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+        
+        .section {
+            padding: 20px;
+        }
+        
+        .section h2 {
+            margin: 0 0 20px 0;
+            color: #1e3c72;
+            border-bottom: 3px solid #2a5298;
+            padding-bottom: 10px;
+            font-size: 1.4em;
+        }
+        
+        /* MENY */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .menu-item {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .menu-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(42, 82, 152, 0.1), transparent);
+            transition: left 0.5s;
+        }
+        
+        .menu-item:hover::before {
+            left: 100%;
+        }
+        
+        .menu-item:hover {
+            border-color: #2a5298;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(42, 82, 152, 0.2);
+        }
+        
+        .menu-item:active {
+            transform: scale(0.98);
+            background: #2a5298;
+            color: white;
+        }
+        
+        .item-info {
+            flex: 1;
+        }
+        
+        .item-name {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        
+        .item-description {
+            font-size: 12px;
+            color: #666;
+            opacity: 0.8;
+        }
+        
+        .item-price {
+            font-weight: bold;
+            font-size: 18px;
+            color: #28a745;
+            margin-left: 15px;
+        }
+        
+        .menu-item:active .item-price {
+            color: white;
+        }
+        
+        .add-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .add-btn:hover {
+            background: #218838;
+            transform: scale(1.1);
+        }
+        
+        .add-btn:active {
+            transform: scale(0.9);
+        }
+        
+        /* KUNDVAGN */
+        .cart-section {
+            background: #f8f9fa;
+            border-top: 3px solid #e9ecef;
+            min-height: 150px;
+        }
+        
+        .cart-empty {
+            text-align: center;
+            color: #6c757d;
+            padding: 40px 20px;
+            font-style: italic;
+        }
+        
+        .cart-items {
+            margin-bottom: 20px;
+        }
+        
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .cart-item:last-child {
+            border-bottom: none;
+        }
+        
+        .cart-item-info {
+            flex: 1;
+        }
+        
+        .cart-item-name {
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+        
+        .cart-item-price {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-right: 15px;
+        }
+        
+        .qty-btn {
+            width: 30px;
+            height: 30px;
+            border: none;
+            border-radius: 50%;
+            background: #dc3545;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .qty-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .qty-btn.plus {
+            background: #28a745;
+        }
+        
+        .quantity {
+            font-weight: bold;
+            min-width: 20px;
+            text-align: center;
+        }
+        
+        .item-total {
+            font-weight: bold;
+            color: #1e3c72;
+            min-width: 60px;
+            text-align: right;
+        }
+        
+        .cart-total {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+            border: 2px solid #2a5298;
+        }
+        
+        .total-amount {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #1e3c72;
+        }
+        
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 15px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-swish {
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+            color: white;
+            font-size: 18px;
+        }
+        
+        .btn-swish:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+        }
+        
+        .btn-clear {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-clear:hover {
+            background: #5a6268;
+        }
+        
+        .status {
+            margin: 15px 0;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+        
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+        
+        .order-info {
+            background: #fff3e0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #FF6B35;
+        }
+        
+        .order-info h4 {
+            margin: 0 0 10px 0;
+            color: #1e3c72;
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .swish-icon {
+            display: inline-block;
+            margin-right: 8px;
+            font-size: 20px;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                border-radius: 0;
+                margin: 0 -10px;
+            }
+            
+            body {
+                padding: 0;
+            }
+            
+            .section {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="https://sportality.cdn.s8y.se/team-logos/bik1_bik.svg" alt="BIK Karlskoga" class="logo">
+        <h1>BIK Karlskoga</h1>
+        <p>Beställ från vårt café</p>
+    </div>
+
+    <div class="container">
+        <!-- MENY SEKTION -->
+        <div class="section">
+            <h2>🍽️ Meny</h2>
+            
+            <div class="menu-grid">
+                <div class="menu-item" data-name="Kaffe" data-price="25">
+                    <div class="item-info">
+                        <div class="item-name">Kaffe</div>
+                        <div class="item-description">Nybryggt kaffe</div>
+                    </div>
+                    <div class="item-price">25 kr</div>
+                    <button class="add-btn">+</button>
+                </div>
+                
+                <div class="menu-item" data-name="Te" data-price="20">
+                    <div class="item-info">
+                        <div class="item-name">Te</div>
+                        <div class="item-description">Varmt te, olika sorter</div>
+                    </div>
+                    <div class="item-price">20 kr</div>
+                    <button class="add-btn">+</button>
+                </div>
+                
+                <div class="menu-item" data-name="Läsk" data-price="30">
+                    <div class="item-info">
+                        <div class="item-name">Läsk</div>
+                        <div class="item-description">Kall läsk, olika sorter</div>
+                    </div>
+                    <div class="item-price">30 kr</div>
+                    <button class="add-btn">+</button>
+                </div>
+                
+                <div class="menu-item" data-name="Vatten" data-price="15">
+                    <div class="item-info">
+                        <div class="item-name">Vatten</div>
+                        <div class="item-description">Kallfiltrerat vatten</div>
+                    </div>
+                    <div class="item-price">15 kr</div>
+                    <button class="add-btn">+</button>
+                </div>
+                
+                <div class="menu-item" data-name="Smörgås" data-price="45">
+                    <div class="item-info">
+                        <div class="item-name">Smörgås</div>
+                        <div class="item-description">Färsk smörgås med pålägg</div>
+                    </div>
+                    <div class="item-price">45 kr</div>
+                    <button class="add-btn">+</button>
+                </div>
+                
+                <div class="menu-item" data-name="Varmkorv" data-price="35">
+                    <div class="item-info">
+                        <div class="item-name">Varmkorv</div>
+                        <div class="item-description">Med bröd och tillbehör</div>
+                    </div>
+                    <div class="item-price">35 kr</div>
+                    <button class="add-btn">+</button>
+                </div>
+                
+                <div class="menu-item" data-name="Hamburgare" data-price="65">
+                    <div class="item-info">
+                        <div class="item-name">Hamburgare</div>
+                        <div class="item-description">Saftig hamburgare med tillbehör</div>
+                    </div>
+                    <div class="item-price">65 kr</div>
+                    <button class="add-btn">+</button>
+                </div>
+                
+                <div class="menu-item" data-name="Chips" data-price="20">
+                    <div class="item-info">
+                        <div class="item-name">Chips</div>
+                        <div class="item-description">Krispiga chips</div>
+                    </div>
+                    <div class="item-price">20 kr</div>
+                    <button class="add-btn">+</button>
+                </div>
+                
+                <div class="menu-item" data-name="Glass" data-price="25">
+                    <div class="item-info">
+                        <div class="item-name">Glass</div>
+                        <div class="item-description">Kall glass, olika smaker</div>
+                    </div>
+                    <div class="item-price">25 kr</div>
+                    <button class="add-btn">+</button>
+                </div>
+                
+                <div class="menu-item" data-name="Kaka" data-price="30">
+                    <div class="item-info">
+                        <div class="item-name">Kaka</div>
+                        <div class="item-description">Hembakad kaka</div>
+                    </div>
+                    <div class="item-price">30 kr</div>
+                    <button class="add-btn">+</button>
+                </div>
+                
+                <div class="menu-item" data-name="Godis" data-price="15">
+                    <div class="item-info">
+                        <div class="item-name">Godis</div>
+                        <div class="item-description">Lösgodis</div>
+                    </div>
+                    <div class="item-price">15 kr</div>
+                    <button class="add-btn">+</button>
+                </div>
+                
+                <div class="menu-item" data-name="Öl (alkoholfri)" data-price="35">
+                    <div class="item-info">
+                        <div class="item-name">Öl (alkoholfri)</div>
+                        <div class="item-description">Kall alkoholfri öl</div>
+                    </div>
+                    <div class="item-price">35 kr</div>
+                    <button class="add-btn">+</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- KUNDVAGN SEKTION -->
+        <div class="section cart-section">
+            <h2>🛒 Din beställning</h2>
+            
+            <div id="cartContent">
+                <div class="cart-empty">
+                    <p>🛍️ Din kundvagn är tom</p>
+                    <p>Lägg till produkter från menyn ovan</p>
+                </div>
+            </div>
+            
+            <div class="status" id="statusMsg"></div>
+            
+            <div class="action-buttons" id="actionButtons" style="display: none;">
+                <div class="cart-total">
+                    <div class="total-amount" id="totalAmount">Totalt: 0 kr</div>
+                </div>
+                
+                <button class="btn btn-swish" id="swishBtn">
+                    <span class="swish-icon">📱</span>Betala med Swish
+                </button>
+                
+                <button class="btn btn-clear" id="clearBtn">
+                    🗑️ Rensa beställning
+                </button>
+                
+                <div class="order-info">
+                    <h4>💡 Så här fungerar det:</h4>
+                    <p>1. Klicka på "Betala med Swish"</p>
+                    <p>2. Du omdirigeras till Swish-appen</p>
+                    <p>3. Bekräfta betalningen</p>
+                    <p>4. Hämta din beställning i cafét!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variabler
+        let cart = {};
+        const swishNumber = '1234701777';
+        
+        // Visa statusmeddelanden
+        function showStatus(message, type = 'success') {
+            const statusEl = document.getElementById('statusMsg');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            statusEl.style.display = 'block';
+            
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Lägg till produkt i kundvagn
+        function addToCart(name, price) {
+            if (cart[name]) {
+                cart[name].quantity += 1;
+            } else {
+                cart[name] = {
+                    price: price,
+                    quantity: 1
+                };
+            }
+            
+            updateCartDisplay();
+            showStatus(`${name} tillagd i kundvagnen!`);
+            
+            // Lägg till visuell feedback
+            const addedItem = event.target.closest('.menu-item');
+            addedItem.style.background = '#28a745';
+            addedItem.style.color = 'white';
+            addedItem.style.transform = 'scale(1.02)';
+            
+            setTimeout(() => {
+                addedItem.style.background = '';
+                addedItem.style.color = '';
+                addedItem.style.transform = '';
+            }, 200);
+        }
+        
+        // Uppdatera kvantitet
+        function updateQuantity(name, change) {
+            if (cart[name]) {
+                cart[name].quantity += change;
+                
+                if (cart[name].quantity <= 0) {
+                    delete cart[name];
+                    showStatus(`${name} borttagen från kundvagnen`);
+                } else {
+                    showStatus(`${name} kvantitet uppdaterad`);
+                }
+                
+                updateCartDisplay();
+            }
+        }
+        
+        // Uppdatera kundvagnsvisning
+        function updateCartDisplay() {
+            const cartContent = document.getElementById('cartContent');
+            const actionButtons = document.getElementById('actionButtons');
+            const totalAmount = document.getElementById('totalAmount');
+            
+            const cartItems = Object.keys(cart);
+            
+            if (cartItems.length === 0) {
+                cartContent.innerHTML = `
+                    <div class="cart-empty">
+                        <p>🛍️ Din kundvagn är tom</p>
+                        <p>Lägg till produkter från menyn ovan</p>
+                    </div>
+                `;
+                actionButtons.style.display = 'none';
+                return;
+            }
+            
+            let html = '<div class="cart-items">';
+            let total = 0;
+            
+            cartItems.forEach(name => {
+                const item = cart[name];
+                const itemTotal = item.price * item.quantity;
+                total += itemTotal;
+                
+                html += `
+                    <div class="cart-item">
+                        <div class="cart-item-info">
+                            <div class="cart-item-name">${name}</div>
+                            <div class="cart-item-price">${item.price} kr/st</div>
+                        </div>
+                        <div class="quantity-controls">
+                            <button class="qty-btn minus" data-name="${name}">−</button>
+                            <span class="quantity">${item.quantity}</span>
+                            <button class="qty-btn plus" data-name="${name}">+</button>
+                        </div>
+                        <div class="item-total">${itemTotal} kr</div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            cartContent.innerHTML = html;
+            
+            totalAmount.textContent = `Totalt: ${total} kr`;
+            actionButtons.style.display = 'block';
+            
+            // Lägg till pulse-effekt på totalsumman
+            totalAmount.classList.add('pulse');
+            setTimeout(() => {
+                totalAmount.classList.remove('pulse');
+            }, 1000);
+        }
+        
+        // Rensa kundvagn
+        function clearCart() {
+            cart = {};
+            updateCartDisplay();
+            showStatus('Kundvagnen rensad!');
+        }
+        
+        // Öppna Swish för betalning
+        function payWithSwish() {
+            const total = Object.keys(cart).reduce((sum, name) => {
+                return sum + (cart[name].price * cart[name].quantity);
+            }, 0);
+            
+            if (total === 0) {
+                showStatus('Kundvagnen är tom!', 'error');
+                return;
+            }
+            
+            // Skapa beställningsmeddelande
+            const orderItems = Object.keys(cart).map(name => {
+                const item = cart[name];
+                return `${item.quantity}x ${name}`;
+            }).join(', ');
+            
+            const message = `BIK Karlskoga - ${orderItems}`;
+            const truncatedMessage = message.length > 70 ? message.substring(0, 67) + '...' : message;
+            
+            // Skapa Swish-URL
+            const formattedAmount = total.toFixed(2).replace('.', ',');
+            const swishUrl = `swish://payment?data={"version":1,"payee":{"value":"${swishNumber}"},"amount":{"value":"${formattedAmount}"},"message":{"value":"${encodeURIComponent(truncatedMessage)}"}}`;
+            
+            console.log('Swish URL:', swishUrl);
+            
+            try {
+                // Försök öppna Swish-appen
+                window.location.href = swishUrl;
+                
+                showStatus(`Öppnar Swish för ${total} kr...`);
+                
+                // Visa bekräftelsemeddelande
+                setTimeout(() => {
+                    if (confirm(`Betalning skickad till Swish för ${total} kr.\n\nNär du bekräftat betalningen, hämta din beställning i cafét!\n\nVill du rensa kundvagnen?`)) {
+                        clearCart();
+                    }
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Swish fel:', error);
+                showStatus('Kunde inte öppna Swish. Kontrollera att appen är installerad.', 'error');
+            }
+        }
+        
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Lägg till produkter i kundvagn
+            document.querySelectorAll('.add-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const menuItem = this.closest('.menu-item');
+                    const name = menuItem.dataset.name;
+                    const price = parseInt(menuItem.dataset.price);
+                    addToCart(name, price);
+                });
+            });
+            
+            // Klick på hela menu-item
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    if (!e.target.classList.contains('add-btn')) {
+                        const name = this.dataset.name;
+                        const price = parseInt(this.dataset.price);
+                        addToCart(name, price);
+                    }
+                });
+            });
+            
+            // Kvantitets-knappar (delegerad event)
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('qty-btn')) {
+                    const name = e.target.dataset.name;
+                    const change = e.target.classList.contains('plus') ? 1 : -1;
+                    updateQuantity(name, change);
+                }
+            });
+            
+            // Action buttons
+            document.getElementById('swishBtn').addEventListener('click', payWithSwish);
+            document.getElementById('clearBtn').addEventListener('click', clearCart);
+            
+            showStatus('Välkommen till BIK Karlskoga café! 🏒');
+        });
+    </script>
+</body>
+</html>
